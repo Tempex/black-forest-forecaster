@@ -15,26 +15,36 @@ def prepare_labels(labels:np.ndarray,to_numbers:bool=True)->np.ndarray:
     Returns:
         np.ndarray: Array with the reclassified and encoded labels.
     """
-    orig_labels = ['Sal-Weide', 'Vogelbeere', 'Haenge-Birke', 'Asch-Weide',
-       'Grau-Erle', 'Berg-Ahorn', 'Feld-Ahorn', 'Gem. Hasel', 'Rotbuche', 
-       'Vogelkirsche', 'Traubeneiche', 'Schwarzer Holunder',
-       'Roteiche', 'Rosskastanie', 'Berg-Ulme', 'Schwarz-Erle',
-       'Moor-Birke', 'Espe', 'Stechpalme', 'Schwarz-Weide',
-       'Gew. Traubenkirsche', 'Linde', 'Weide', 'Erle']
-    new_labels = ['Other', 'Other', 'Birke', 'Other',
-        'Other', 'Ahorn', 'Ahorn', 'Other', 'Rotbuche',
-        'Other', 'Other', 'Other', 
-        'Other', 'Other', 'Other', 'Other', 
-        'Birke', 'Other', 'Other', 'Other', 
-        'Other', 'Other', 'Other', 'Other']
-    for i in range(labels.shape[0]):
-        for old, new in zip(orig_labels,new_labels):
-            labels[i] = np.char.replace(labels[i],old,new)
-        if to_numbers:
-            label_dict = {"Other":"0","Ahorn":"1","Birke":"2","Rotbuche":"3"}
-            for k, v in label_dict.items():
-                labels[i] = np.char.replace(labels[i],k,v)
-    labels = labels.astype(int)         
+    labels = labels.astype("object")
+    if to_numbers:
+        labels_int = np.zeros_like(labels)
+        # Loop through each label
+        for i in range(len(labels[1])):
+            # Assign a 1 if it is a Rotbuche
+            if labels[1][i] == 'Rotbuche':
+                labels_int[:,i] =  1
+            # Assign a 2 if it is Ahorn    
+            elif labels[1][i] == 'Berg-Ahorn' or labels[1][i] == 'Feld-Ahorn':
+                labels_int[:,i] = 2
+            # Assign a 3 if it is a Birke    
+            elif labels[1][i] == 'Haenge-Birke' or labels[1][i] == 'Moor-Birke':
+                labels_int[:,i] = 3
+        # The array is still of type "obj", we need to change it to "int"
+        labels = labels_int.astype('int') 
+    else:
+        labels_sorted = np.full_like(labels,"Other")
+        # Loop through each label
+        for i in range(len(labels[1])):
+            # Assign a 1 if it is a Rotbuche
+            if labels[1][i] == 'Rotbuche':
+                labels_sorted[:,i] = 'Rotbuche' 
+            # Assign a 2 if it is Ahorn    
+            elif labels[1][i] == 'Berg-Ahorn' or labels[1][i] == 'Feld-Ahorn':
+                labels_sorted[:,i] = 'Ahorn'
+            # Assign a 3 if it is a Birke    
+            elif labels[1][i] == 'Haenge-Birke' or labels[1][i] == 'Moor-Birke':
+                labels_sorted[:,i] = 'Birke'
+        labels = labels_sorted     
     return labels
 
 def tf_train_test_val_split(data:np.ndarray, labels:np.ndarray, train_size:float=0.8, val_size:float=0.1, random_state:int=None)->np.ndarray:
@@ -75,6 +85,88 @@ def tf_train_test_val_split(data:np.ndarray, labels:np.ndarray, train_size:float
     labels_val = labels_val.reshape(-1)
     labels_test = labels_test.reshape(-1)
     return data_train, data_test, data_val, labels_train, labels_test, labels_val  
+
+def augment_images(img_array:np.ndarray)->np.ndarray:
+    """Function to perform data augmentation on given array.
+
+    Args:
+        img_array (np.ndarray): array to be augmented
+
+    Returns:
+        np.ndarray: array with augmented data
+    """
+    # Predefine an array that will contain the augmented images
+    img_array_full = np.tile(img_array, (12,1,1,1,1))
+
+    # Loop through each image
+    for i in range(img_array.shape[0]):
+
+        # Augmentation number 0: Nothing
+        img_aug = img_array_full[0,i,:,:,:]
+        img_array_full[0,i,:,:,:] = img_aug
+
+        # Augmentation number 1: 90° rotation        
+        img_aug = tf.image.rot90(img_array[i], k=1).numpy()
+        img_array_full[1,i,:,:,:] = img_aug
+
+        # Augmentation number 2: 90° rotation + vertical flip
+        img_aug = tf.image.rot90(img_array[i], k=1).numpy()
+        img_aug = tf.image.flip_up_down(img_aug).numpy()
+        img_array_full[2,i,:,:,:] = img_aug
+
+        # Augmentation number 3: 90° rotation + horizontal flip
+        img_aug = tf.image.rot90(img_array[i], k=1).numpy()
+        img_aug = tf.image.flip_left_right(img_aug).numpy()
+        img_array_full[3,i,:,:,:] = img_aug
+
+        # Augmentation number 4: 90° rotation + vertical flip +
+        # horizontal flip
+        img_aug = tf.image.rot90(img_array[i], k=1).numpy()
+        img_aug = tf.image.flip_up_down(img_aug).numpy()
+        img_aug = tf.image.flip_left_right(img_aug).numpy()
+        img_array_full[4,i,:,:,:] = img_aug
+
+        # Augmentation number 5: 270° rotation
+        img_aug = tf.image.rot90(img_array[i], k=3).numpy()
+        img_array_full[5,i,:,:,:] = img_aug
+
+        # Augmentation number 6: 270° rotation + vertical flip
+        img_aug = tf.image.rot90(img_array[i], k=3).numpy()
+        img_aug = tf.image.flip_up_down(img_aug).numpy()
+        img_array_full[6,i,:,:,:] = img_aug
+
+        # Augmentation number 7: 90° rotation + horizontal flip
+        img_aug = tf.image.rot90(img_array[i], k=3).numpy()
+        img_aug = tf.image.flip_left_right(img_aug).numpy()
+        img_array_full[7,i,:,:,:] = img_aug
+
+        # Augmentation number 8: 270° rotation + vertical flip +
+        # horizontal flip
+        img_aug = tf.image.rot90(img_array[i], k=3).numpy()
+        img_aug = tf.image.flip_up_down(img_aug).numpy()
+        img_aug = tf.image.flip_left_right(img_aug).numpy()
+        img_array_full[8,i,:,:,:] = img_aug
+
+        # Augmentation number 9: vertical flip + horizontal flip
+        img_aug = tf.image.flip_up_down(img_array[i]).numpy()
+        img_aug = tf.image.flip_left_right(img_aug).numpy()
+        img_array_full[9,i,:,:,:] = img_aug
+
+        # Augmentation number 10: vertical flip
+        img_aug = tf.image.flip_up_down(img_array[i]).numpy()
+        img_array_full[10,i,:,:,:] = img_aug
+
+        # Augmentation number 11: horizontal flip
+        img_aug = tf.image.flip_left_right(img_array[i]).numpy()
+        img_array_full[11,i,:,:,:] = img_aug
+
+        # Report progress
+        if (i%1000 == 0) & (i != 0):
+            print(' - ' + str(round(100*i/img_array.shape[0])) + 
+            '% of all images have been augmented.')
+        elif (i%100 == 0) & (i != 0):
+            print('.', end='')
+    return img_array_full
 
 def oversample(train:np.ndarray, label_train:np.ndarray)->np.ndarray:
     """Oversamples the give dataset by random minority oversampling. All classes will be oversampled till they have the same number as the majority class.
