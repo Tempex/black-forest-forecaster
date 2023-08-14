@@ -92,15 +92,4 @@ def save_data(savepath:str, filename:str, pic_array_list:Union[list,np.ndarray],
     print(f"Array saved as '{filename}.npz' in '{savepath}'")
 
 if __name__=="__main__":
-    tree_data = load_tree_coordinates('./data/Laubbäume_utm32_cleaned.csv')
-    filelist = glob.glob("./data/TDOP/*.tif")
-    pic_arr_list = []
-    label_arr_list = []
-    for file in filelist:
-        print(f"Processing:{file}...")
-        pic_arr, label_arr = extract_trees(file,tree_data,rgb=True)
-        pic_arr_list.append(pic_arr)
-        label_arr_list.append(label_arr)
-        print("Done", end='\n')
-
-    save_data("./data/","data_rgb",pic_arr_list,label_arr_list)
+    pass
